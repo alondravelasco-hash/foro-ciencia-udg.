@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Staff | Foro Ciencia UDG</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Escáner QR JS -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --glass-dark-bg: rgba(44, 30, 22, 0.75);
+            --panel-light-bg: #F4EBE1;
+            --btn-brown: #6b4c3a;
+            --accent-amber: #d99a73;
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #3b302c;
+            color: #ffffff; overflow-x: hidden;
+        }
+        .bg-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: radial-gradient(circle at center, #4a3e39 0%, #2b211e 100%); 
+            z-index: -1; 
+        }
+        
+        /* Efecto Cristal */
+        .glass-dark { 
+            background: var(--glass-dark-bg); backdrop-filter: blur(24px); 
+            border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
+            color: white; transition: all 0.3s ease; 
+        }
+        
+        .top-nav-glass { background: rgba(35, 26, 22, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); }
+
+        /* Estilos del escáner */
+        #reader { width: 100%; border-radius: 1rem; overflow: hidden; border: none !important; }
+        #reader video { object-fit: cover; border-radius: 1rem; width: 100% !important; }
+        #reader__dashboard_section_csr span { color: white !important; }
+        #reader__dashboard_section_swaplink { color: var(--accent-amber) !important; text-decoration: none; margin-top: 10px; display: inline-block; }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col font-sans antialiased">
+    <div class="bg-overlay"></div>
+
+    <!-- Navegación Superior -->
+    <header class="pt-6 pb-2 px-4 z-40 sticky top-0 flex justify-center">
+        <div class="top-nav-glass rounded-full px-6 py-3 flex items-center justify-between gap-4 max-w-7xl w-full shadow-2xl">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-[#d99a73]/20 flex items-center justify-center border border-[#d99a73]/30">
+                    <i class="fa-solid fa-clipboard-check text-[#d99a73] text-sm"></i>
+                </div>
+                <span class="font-light tracking-wide text-sm hidden sm:inline">Panel de Staff <span class="font-semibold opacity-70">Foro Ciencia</span></span>
+            </div>
+            
+            <div class="flex gap-2">
+                <button onclick="exportToCSV()" class="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-download"></i> <span class="hidden sm:inline">Respaldar CSV</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl mx-auto px-4 py-8 w-full">
+        
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-light tracking-tight mb-2">Control de Asistencia</h1>
+            <p class="text-[#d99a73] font-medium text-sm tracking-widest uppercase">Escáner Oficial</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 relative items-start">
+            
+            <!-- COLUMNA IZQUIERDA: LISTA DE ACTIVIDADES Y BASE DE DATOS -->
+            <div class="lg:col-span-2 space-y-8 pb-10">
+                
+                <!-- Día 1 -->
+                <div class="glass-dark p-6 md:p-8 rounded-[2rem]">
+                    <div class="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+                        <div class="w-10 h-10 rounded-xl bg-[#6b4c3a]/30 flex items-center justify-center text-[#d99a73]">
+                            <i class="fa-solid fa-calendar-day text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-light">3 de Diciembre</h2>
+                            <p class="text-xs opacity-50 uppercase tracking-widest">Día 1 • 15 Actividades</p>
+                        </div>
+                    </div>
+                    <!-- CONTENEDOR BOTONES DÍA 1 -->
+                    <div id="day1-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4"></div>
+                </div>
+
+                <!-- Día 2 -->
+                <div class="glass-dark p-6 md:p-8 rounded-[2rem]">
+                    <div class="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+                        <div class="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-white/70">
+                            <i class="fa-solid fa-calendar-day text-lg"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-light">4 de Diciembre</h2>
+                            <p class="text-xs opacity-50 uppercase tracking-widest">Día 2 • 15 Actividades</p>
+                        </div>
+                    </div>
+                    <!-- CONTENEDOR BOTONES DÍA 2 -->
+                    <div id="day2-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4"></div>
+                </div>
+
+                <!-- REGISTROS EN FRONT-END -->
+                <div class="glass-dark p-6 md:p-8 rounded-[2rem] border border-[#d99a73]/40 shadow-[0_0_30px_rgba(217,154,115,0.05)]">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 border-b border-white/10 pb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-[#d99a73]/20 flex items-center justify-center text-[#d99a73]">
+                                <i class="fa-solid fa-database text-lg"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-light">Asistencia Registrada</h2>
+                                <p class="text-xs opacity-50 uppercase tracking-widest">Actualizado en tiempo real</p>
+                            </div>
+                        </div>
+                        <span id="counter-badge" class="bg-black/40 text-[#d99a73] px-4 py-2 rounded-full text-xs font-bold border border-[#d99a73]/30">
+                            0 Asistentes
+                        </span>
+                    </div>
+                    
+                    <div class="overflow-x-auto rounded-xl border border-white/5 bg-black/20">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-black/40 text-[#d99a73]">
+                                <tr>
+                                    <th class="p-4 font-medium">Asistente</th>
+                                    <th class="p-4 font-medium">Tipo</th>
+                                    <th class="p-4 font-medium">Organización</th>
+                                    <th class="p-4 font-medium">Actividad</th>
+                                    <th class="p-4 font-medium text-right">Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody id="front-database-body" class="divide-y divide-white/5">
+                                <!-- JS inyecta los registros -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- COLUMNA DERECHA: ESCÁNER ACTIVO -->
+            <div class="lg:col-span-1 lg:sticky lg:top-28">
+                <div class="glass-dark p-6 rounded-[2.5rem] border border-[#d99a73]/40 shadow-[0_0_40px_rgba(217,154,115,0.15)] relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-[#d99a73] rounded-full blur-[80px] opacity-20 pointer-events-none"></div>
+
+                    <div class="text-center mb-6">
+                        <span class="inline-block px-3 py-1 bg-black/40 text-white/50 border border-white/10 rounded-full text-[10px] uppercase font-bold tracking-widest mb-3" id="status-badge">
+                            En espera
+                        </span>
+                        <h3 id="scanner-activity-title" class="text-2xl font-light leading-tight text-white">Selecciona una <br><span class="text-[#d99a73]">actividad</span></h3>
+                    </div>
+                    
+                    <div id="scanner-container" class="hidden flex-col items-center">
+                        <div class="relative w-full rounded-2xl overflow-hidden bg-black/50 aspect-square flex items-center justify-center mb-6 border border-white/10 p-2">
+                            <div class="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-[#d99a73] rounded-tl-lg z-10 pointer-events-none"></div>
+                            <div class="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-[#d99a73] rounded-tr-lg z-10 pointer-events-none"></div>
+                            <div class="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-[#d99a73] rounded-bl-lg z-10 pointer-events-none"></div>
+                            <div class="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-[#d99a73] rounded-br-lg z-10 pointer-events-none"></div>
+                            
+                            <div id="reader" class="w-full h-full rounded-xl overflow-hidden bg-black"></div>
+                        </div>
+
+                        <div id="scan-feedback" class="w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-white/5 text-sm text-center border border-white/5 transition-colors duration-300">
+                            Apunta al código QR...
+                        </div>
+                        
+                        <button onclick="closeScanner()" class="w-full mt-6 py-3 border border-white/10 rounded-xl text-sm hover:bg-white/10 text-white/70 transition-all">
+                            <i class="fa-solid fa-power-off mr-2"></i> Detener Escáner
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <script>
+        // 1. GENERAR 30 ACTIVIDADES (15 por día)
+        const ACTIVITIES = [];
+        for(let i=1; i<=15; i++) ACTIVITIES.push({ id: i, date: "3 de Dic", title: `Actividad ${i}` });
+        for(let i=16; i<=30; i++) ACTIVITIES.push({ id: i, date: "4 de Dic", title: `Actividad ${i-15}` });
+
+        // 2. ENLACE A GOOGLE SHEETS
+        const driveUrl = "https://script.google.com/macros/s/AKfycbxj5eteb9KxTEDI1ZcxCRieCnOBrbdMcohaFekMYrdM9lMhjz3iRcUCWLDItEu5ueV5/exec"; 
+        
+        let activeConfForScanner = null;
+        let html5QrcodeScanner = null;
+        let records = JSON.parse(localStorage.getItem('staffRegistros')) || [];
+
+        // 3. RENDERIZAR BOTONES DE MANERA SEGURA AL CARGAR LA PÁGINA
+        function renderActivities() {
+            const day1Grid = document.getElementById('day1-grid');
+            const day2Grid = document.getElementById('day2-grid');
+            
+            if(!day1Grid || !day2Grid) return;
+
+            day1Grid.innerHTML = '';
+            day2Grid.innerHTML = '';
+
+            ACTIVITIES.forEach(act => {
+                const btnHTML = `
+                <button onclick="startScanner(${act.id})" class="group p-4 bg-black/20 hover:bg-[#6b4c3a]/80 border border-white/5 hover:border-[#d99a73]/50 rounded-2xl text-left transition-all duration-300 flex flex-col justify-between h-24 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-150"></div>
+                    <span class="text-sm font-medium text-white/90 group-hover:text-white z-10 relative">${act.title}</span>
+                    <span class="text-[10px] uppercase tracking-widest text-[#d99a73] font-bold opacity-70 group-hover:opacity-100 flex items-center gap-1 z-10 relative">
+                        <i class="fa-solid fa-expand"></i> Escanear
+                    </span>
+                </button>`;
+                
+                if(act.id <= 15) day1Grid.innerHTML += btnHTML;
+                else day2Grid.innerHTML += btnHTML;
+            });
+
+            renderDatabaseFront();
+        }
+
+        document.addEventListener('DOMContentLoaded', renderActivities);
+
+        function renderDatabaseFront() {
+            const tbody = document.getElementById('front-database-body');
+            const badge = document.getElementById('counter-badge');
+            if(!tbody || !badge) return;
+
+            badge.innerText = `${records.length} Asistentes`;
+            tbody.innerHTML = '';
+            
+            if(records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-white/50">Aún no hay escaneos realizados.</td></tr>`;
+                return;
+            }
+
+            [...records].reverse().forEach(r => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-white/5 transition-colors">
+                        <td class="p-4 font-medium text-white/90">${r.Nombre}</td>
+                        <td class="p-4 text-xs text-[#d99a73]">${r.Tipo || 'N/A'}</td>
+                        <td class="p-4 text-white/70">${r.Organizacion}</td>
+                        <td class="p-4 text-white/70">${r.Conferencia}</td>
+                        <td class="p-4 text-xs text-white/50 text-right">${r.Timestamp}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 4. LÓGICA DEL ESCÁNER
+        function startScanner(id) {
+            activeConfForScanner = ACTIVITIES.find(a => a.id === id);
+            
+            document.getElementById('scanner-activity-title').innerHTML = `${activeConfForScanner.title} <br><span class="text-sm opacity-50 font-normal tracking-wide">${activeConfForScanner.date}</span>`;
+            document.getElementById('scanner-container').classList.remove('hidden');
+            document.getElementById('scanner-container').classList.add('flex');
+            
+            const badge = document.getElementById('status-badge');
+            badge.innerText = "Cámara Activa";
+            badge.className = "inline-block px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-[10px] uppercase font-bold tracking-widest mb-3 animate-pulse";
+            
+            const feedback = document.getElementById('scan-feedback');
+            feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-black/40 text-sm text-white/60 border border-white/5";
+            feedback.innerHTML = '<i class="fa-solid fa-camera text-lg mb-1 opacity-50"></i> Apunta al código QR';
+
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(() => {});
+            }
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                fps: 10, 
+                qrbox: {width: 250, height: 250},
+                aspectRatio: 1.0,
+                showTorchButtonIfSupported: true
+            }, false);
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            
+            if(window.innerWidth < 1024) {
+                setTimeout(() => {
+                    document.getElementById('scanner-activity-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            }
+        }
+
+        function closeScanner() {
+            document.getElementById('scanner-container').classList.add('hidden');
+            document.getElementById('scanner-container').classList.remove('flex');
+            document.getElementById('scanner-activity-title').innerHTML = 'Selecciona una <br><span class="text-[#d99a73]">actividad</span>';
+            
+            const badge = document.getElementById('status-badge');
+            badge.innerText = "En espera";
+            badge.className = "inline-block px-3 py-1 bg-black/40 text-white/50 border border-white/10 rounded-full text-[10px] uppercase font-bold tracking-widest mb-3";
+
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(() => {});
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            if(html5QrcodeScanner) html5QrcodeScanner.pause();
+            const feedback = document.getElementById('scan-feedback');
+
+            try {
+                const user = JSON.parse(decodedText);
+                
+                if(!user.n) throw new Error("QR Inválido");
+
+                const newRecord = {
+                    Nombre: user.n,
+                    Tipo: user.t || 'Asistente',
+                    Organizacion: user.o || 'N/A',
+                    DiasRegistrados: user.d || 'N/A',
+                    Conferencia: activeConfForScanner.title,
+                    Dia: activeConfForScanner.date,
+                    Hora: "Registro en puerta",
+                    Timestamp: new Date().toLocaleString()
+                };
+
+                records.push(newRecord);
+                localStorage.setItem('staffRegistros', JSON.stringify(records));
+                renderDatabaseFront();
+
+                fetch(driveUrl, { 
+                    method: 'POST', mode: 'no-cors', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(newRecord) 
+                }).catch(e => console.log(e));
+
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-green-500/20 border border-green-500/50 text-green-400 font-bold text-sm shadow-[0_0_20px_rgba(74,222,128,0.2)]";
+                feedback.innerHTML = `<i class="fa-solid fa-check-circle text-xl mb-1"></i> <span>${user.n} (${user.t || 'Asistente'})</span>`;
+
+            } catch (err) {
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 font-bold text-sm shadow-[0_0_20px_rgba(248,113,113,0.2)]";
+                feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-xl mb-1"></i> <span>Código no reconocido</span>`;
+            }
+
+            setTimeout(() => {
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-black/40 text-sm text-white/60 border border-white/5 transition-all";
+                feedback.innerHTML = '<i class="fa-solid fa-qrcode text-lg mb-1 opacity-50"></i> Apunta al siguiente QR...';
+                if(html5QrcodeScanner) html5QrcodeScanner.resume();
+            }, 2000);
+        }
+
+        function onScanFailure(error) { 
+            // Ignorar fallos frame a frame
+        }
+
+        function exportToCSV() {
+            if(!records.length) {
+                alert("Aún no se ha escaneado ningún asistente.");
+                return;
+            }
+            let csv = "Nombre,Tipo,Organización,DíasRegistrados,Actividad,Día,Timestamp\n" + records.map(r => `"${r.Nombre}","${r.Tipo}","${r.Organizacion}","${r.DiasRegistrados}","${r.Conferencia}","${r.Dia}","${r.Timestamp}"`).join('\n');
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            link.download = `Respaldos_Staff_ForoCiencia.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>

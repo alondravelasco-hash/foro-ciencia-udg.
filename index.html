@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro | Foro Ciencia UDG</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Generator CDN Fiable -->
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-image: url('https://upload.wikimedia.org/wikipedia/commons/c/cd/Rector%C3%ADa_General_de_la_Universidad_de_Guadalajara.jpg'); background-size: cover; background-position: center; background-attachment: fixed; color: #ffffff; }
+        .bg-overlay { position: fixed; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(20, 10, 5, 0.8) 100%); z-index: -1; }
+        .glass-dark { background: rgba(44, 30, 22, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .light-input, select.light-input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; border-radius: 12px; padding: 12px 16px; width: 100%; appearance: none; }
+        .light-input:focus, select.light-input:focus { outline: none; border-color: #d99a73; background: rgba(255,255,255,0.15); }
+        select.light-input option { background: #2c1e16; color: white; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+    <div class="bg-overlay"></div>
+    
+    <div class="glass-dark p-8 rounded-3xl w-full max-w-md text-center">
+        <h1 class="text-3xl font-light mb-1">Foro Ciencia UDG</h1>
+        <p class="text-[#d99a73] text-sm mb-6 uppercase tracking-widest">Obtén tu Gafete QR</p>
+
+        <form id="form-general" onsubmit="generatePersonalQR(event)" class="space-y-4 text-left">
+            <div>
+                <label class="block text-xs uppercase text-white/60 mb-1 ml-1">Nombre Completo</label>
+                <input type="text" id="reg-name" required placeholder="Ej. Ana García" class="light-input">
+            </div>
+            
+            <div>
+                <label class="block text-xs uppercase text-white/60 mb-1 ml-1">Tipo de Asistente</label>
+                <select id="reg-type" required class="light-input">
+                    <option value="" disabled selected>Selecciona una opción</option>
+                    <option value="Estudiante">Estudiante</option>
+                    <option value="Docente">Docente</option>
+                    <option value="Visitante Externo">Visitante Externo</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs uppercase text-white/60 mb-1 ml-1">Organización o Centro Universitario</label>
+                <input type="text" id="reg-org" required placeholder="Ej. CUCEA, Empresa S.A..." class="light-input">
+            </div>
+
+            <div class="pt-2">
+                <label class="block text-xs uppercase text-white/60 mb-2 ml-1">Días de Asistencia</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer bg-white/10 p-3 rounded-xl w-1/2 border border-white/20 hover:border-[#d99a73] transition-colors">
+                        <input type="checkbox" id="day-1" value="Día 1" class="w-4 h-4 accent-[#d99a73]" onchange="validateDays()">
+                        <span class="text-sm">Día 1</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer bg-white/10 p-3 rounded-xl w-1/2 border border-white/20 hover:border-[#d99a73] transition-colors">
+                        <input type="checkbox" id="day-2" value="Día 2" class="w-4 h-4 accent-[#d99a73]" onchange="validateDays()">
+                        <span class="text-sm">Día 2</span>
+                    </label>
+                </div>
+                <p id="days-error" class="text-red-400 text-xs mt-1 ml-1 hidden">Debes seleccionar al menos un día.</p>
+            </div>
+            
+            <button type="submit" id="submit-btn" class="w-full py-4 mt-4 bg-[#6b4c3a] hover:bg-[#4a3427] rounded-xl font-bold shadow-lg text-lg transition-colors">
+                Generar mi Pase QR
+            </button>
+        </form>
+
+        <div id="personal-qr-result" class="hidden mt-6 animate-fade-in flex flex-col items-center">
+            <h3 class="text-xl font-medium text-green-400 mb-2"><i class="fa-solid fa-check-circle"></i> ¡Registro Exitoso!</h3>
+            <p class="text-sm opacity-80 mb-6">Tu código se ha descargado automáticamente. Si no ocurrió, usa el botón de abajo.</p>
+            
+            <div class="bg-white p-4 rounded-3xl inline-block shadow-[0_0_30px_rgba(217,154,115,0.3)] mb-4">
+                <canvas id="qr-canvas"></canvas>
+            </div>
+            
+            <p id="qr-name-display" class="font-medium text-lg"></p>
+            <p id="qr-type-display" class="text-sm text-[#d99a73] mb-1 mt-1 font-semibold"></p>
+            <p id="qr-org-display" class="text-sm opacity-60 mb-6"></p>
+
+            <button onclick="downloadQR()" id="manual-download-btn" class="px-6 py-3 bg-[#d99a73] hover:bg-[#c2845d] text-gray-900 rounded-xl font-bold shadow-lg text-sm transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-download"></i> Descargar Imagen QR
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentUserName = "";
+        let qrCanvas = document.getElementById('qr-canvas');
+
+        function validateDays() {
+            const day1 = document.getElementById('day-1').checked;
+            const day2 = document.getElementById('day-2').checked;
+            const errorMsg = document.getElementById('days-error');
+            
+            if (!day1 && !day2) {
+                errorMsg.classList.remove('hidden');
+                return false;
+            } else {
+                errorMsg.classList.add('hidden');
+                return true;
+            }
+        }
+
+        function generatePersonalQR(e) {
+            e.preventDefault();
+            
+            if (!validateDays()) return;
+
+            const name = document.getElementById('reg-name').value;
+            currentUserName = name;
+            const org = document.getElementById('reg-org').value;
+            const type = document.getElementById('reg-type').value;
+            
+            const day1 = document.getElementById('day-1').checked ? "Día 1" : "";
+            const day2 = document.getElementById('day-2').checked ? "Día 2" : "";
+            const daysAttending = [day1, day2].filter(Boolean).join(" y ");
+            
+            // JSON comprimido para lectura rápida en escáneres móviles
+            const qrData = JSON.stringify({ n: name, o: org, t: type, d: daysAttending });
+
+            // Mostrar vista de resultado
+            document.getElementById('form-general').classList.add('hidden');
+            document.getElementById('personal-qr-result').classList.remove('hidden');
+            
+            document.getElementById('qr-name-display').innerText = name;
+            document.getElementById('qr-type-display').innerText = `${type} | Asiste: ${daysAttending}`;
+            document.getElementById('qr-org-display').innerText = org;
+
+            // Renderizado directo en Canvas (100% fiable)
+            new QRious({
+                element: qrCanvas,
+                value: qrData,
+                size: 250,
+                level: 'H'
+            });
+
+            // Disparar descarga directa inmediatamente
+            setTimeout(() => {
+                downloadQR();
+            }, 300);
+        }
+
+        function downloadQR() {
+            if (!qrCanvas) return;
+            const imageUrl = qrCanvas.toDataURL("image/png");
+            const downloadLink = document.createElement('a');
+            downloadLink.href = imageUrl;
+            downloadLink.download = `Gafete_ForoCiencia_${currentUserName.replace(/\s+/g, '_')}.png`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
+</body>
+</html>
