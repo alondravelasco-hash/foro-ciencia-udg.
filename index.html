@@ -81,6 +81,27 @@
             <!-- COLUMNA IZQUIERDA: LISTA DE ACTIVIDADES Y BASE DE DATOS -->
             <div class="lg:col-span-2 space-y-8 pb-10">
                 
+                <!-- REGISTRO DE ASISTENCIA GENERAL -->
+                <div class="glass-dark p-6 md:p-8 rounded-[2rem] border border-green-500/30 shadow-[0_0_30px_rgba(74,222,128,0.1)]">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-4 border-b border-white/10 pb-4 mb-4">
+                        <div class="flex items-center gap-3 w-full">
+                            <div class="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400">
+                                <i class="fa-solid fa-door-open text-lg"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-light">Entrada General</h2>
+                                <p class="text-xs opacity-50 uppercase tracking-widest">Asistencia Principal al Foro</p>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="startScanner(0)" class="w-full group p-4 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 rounded-2xl text-left transition-all duration-300 flex justify-between items-center h-20 relative overflow-hidden">
+                        <span class="text-lg font-medium text-green-400 z-10 relative">Escanear Asistencia de Entrada</span>
+                        <span class="text-sm uppercase tracking-widest text-green-300 font-bold flex items-center gap-2 z-10 relative">
+                            <i class="fa-solid fa-expand"></i> Escanear
+                        </span>
+                    </button>
+                </div>
+
                 <!-- Día 1 -->
                 <div class="glass-dark p-6 md:p-8 rounded-[2rem]">
                     <div class="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
@@ -135,7 +156,7 @@
                                     <th class="p-4 font-medium">Asistente</th>
                                     <th class="p-4 font-medium">Tipo</th>
                                     <th class="p-4 font-medium">Organización</th>
-                                    <th class="p-4 font-medium">Actividad</th>
+                                    <th class="p-4 font-medium">Actividad / Registro</th>
                                     <th class="p-4 font-medium text-right">Hora</th>
                                 </tr>
                             </thead>
@@ -185,13 +206,15 @@
     </main>
 
     <script>
-        // 1. GENERAR 30 ACTIVIDADES (15 por día)
-        const ACTIVITIES = [];
+        // 1. GENERAR ACTIVIDADES INCLUYENDO ENTRADA GENERAL
+        const ACTIVITIES = [
+            { id: 0, date: "Ambos Días", title: "Asistencia General de Entrada" }
+        ];
         for(let i=1; i<=15; i++) ACTIVITIES.push({ id: i, date: "3 de Dic", title: `Actividad ${i}` });
         for(let i=16; i<=30; i++) ACTIVITIES.push({ id: i, date: "4 de Dic", title: `Actividad ${i-15}` });
 
-        // 2. ENLACE A GOOGLE SHEETS ACTUALIZADO
-        const driveUrl = "https://script.google.com/macros/s/AKfycbxE77r-V8N5q_StvFmF-EK72CNL0zOZVZCq4bGAvYYFOl3lbDOKJaUshVndw_C97ojD/exec"; 
+        // 2. ENLACE A GOOGLE SHEETS (NUEVO ENLACE PROPORCIONADO)
+        const driveUrl = "https://script.google.com/macros/s/AKfycbz0B_EDXAISE9Fia6Mu24G-RzCjge8dzdlk_aa_fziWWQTgWZIJUYeLUw3MJ2QQa7g6/exec"; 
         
         let activeConfForScanner = null;
         let html5QrcodeScanner = null;
@@ -207,7 +230,8 @@
             day1Grid.innerHTML = '';
             day2Grid.innerHTML = '';
 
-            ACTIVITIES.forEach(act => {
+            // Solo renderizamos del 1 al 30 en los grids, el ID 0 ya está en el HTML fijo
+            ACTIVITIES.filter(a => a.id > 0).forEach(act => {
                 const btnHTML = `
                 <button onclick="startScanner(${act.id})" class="group p-4 bg-black/20 hover:bg-[#6b4c3a]/80 border border-white/5 hover:border-[#d99a73]/50 rounded-2xl text-left transition-all duration-300 flex flex-col justify-between h-24 relative overflow-hidden">
                     <div class="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-150"></div>
@@ -246,7 +270,7 @@
                         <td class="p-4 text-xs text-[#d99a73]">${r.Tipo || 'N/A'}</td>
                         <td class="p-4 text-white/70">${r.Organizacion}</td>
                         <td class="p-4 text-white/70">${r.Conferencia}</td>
-                        <td class="p-4 text-xs text-white/50 text-right">${r.Timestamp}</td>
+                        <td class="p-4 text-xs text-white/50 text-right">${r.Hora}</td>
                     </tr>
                 `;
             });
@@ -311,21 +335,28 @@
                 
                 if(!user.n) throw new Error("QR Inválido");
 
+                // Generar fecha y hora reales separadas
+                const now = new Date();
+                const fechaActual = now.toLocaleDateString('es-MX'); // Ej: 21/10/2026
+                const horaActual = now.toLocaleTimeString('es-MX');  // Ej: 12:43:00 p.m.
+
                 const newRecord = {
                     Nombre: user.n,
                     Tipo: user.t || 'Asistente',
                     Organizacion: user.o || 'N/A',
                     DiasRegistrados: user.d || 'N/A',
                     Conferencia: activeConfForScanner.title,
-                    Dia: activeConfForScanner.date,
-                    Hora: "Registro en puerta",
-                    Timestamp: new Date().toLocaleString()
+                    Fecha: fechaActual,
+                    Hora: horaActual,
+                    Dia: activeConfForScanner.date, // Local front-end display
+                    Timestamp: now.toLocaleString()   // Local front-end display
                 };
 
                 records.push(newRecord);
                 localStorage.setItem('staffRegistros', JSON.stringify(records));
                 renderDatabaseFront();
 
+                // Envío de la data a Google Sheets
                 fetch(driveUrl, { 
                     method: 'POST', mode: 'no-cors', 
                     headers: { 'Content-Type': 'application/json' }, 
@@ -333,7 +364,7 @@
                 }).catch(e => console.log(e));
 
                 feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-green-500/20 border border-green-500/50 text-green-400 font-bold text-sm shadow-[0_0_20px_rgba(74,222,128,0.2)]";
-                feedback.innerHTML = `<i class="fa-solid fa-check-circle text-xl mb-1"></i> <span>${user.n} (${user.t || 'Asistente'})</span>`;
+                feedback.innerHTML = `<i class="fa-solid fa-check-circle text-xl mb-1"></i> <span>${user.n} Registrado</span>`;
 
             } catch (err) {
                 feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 font-bold text-sm shadow-[0_0_20px_rgba(248,113,113,0.2)]";
@@ -356,7 +387,7 @@
                 alert("Aún no se ha escaneado ningún asistente.");
                 return;
             }
-            let csv = "Nombre,Tipo,Organización,DíasRegistrados,Actividad,Día,Timestamp\n" + records.map(r => `"${r.Nombre}","${r.Tipo}","${r.Organizacion}","${r.DiasRegistrados}","${r.Conferencia}","${r.Dia}","${r.Timestamp}"`).join('\n');
+            let csv = "Nombre,Tipo,Organización,DíasRegistrados,Actividad,Fecha,Hora\n" + records.map(r => `"${r.Nombre}","${r.Tipo}","${r.Organizacion}","${r.DiasRegistrados}","${r.Conferencia}","${r.Fecha}","${r.Hora}"`).join('\n');
             const link = document.createElement("a");
             link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
             link.download = `Respaldos_Staff_ForoCiencia.csv`;
