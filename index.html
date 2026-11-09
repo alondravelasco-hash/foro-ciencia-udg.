@@ -177,14 +177,13 @@
         let html5QrcodeScanner = null;
         let records = [];
 
-        // PREVENCIÓN DE ERRORES DE LOCALSTORAGE EN APPS SCRIPT
         try {
             const savedData = localStorage.getItem('staffRegistrosFinal');
             if (savedData) {
                 records = JSON.parse(savedData);
             }
         } catch (error) {
-            console.warn("LocalStorage no disponible por restricciones del navegador.", error);
+            console.warn("LocalStorage bloqueado por Apps Script.");
         }
 
         function renderActivities() {
@@ -210,8 +209,6 @@
             });
             renderDatabaseFront();
         }
-
-        document.addEventListener('DOMContentLoaded', renderActivities);
 
         function renderDatabaseFront() {
             const tbody = document.getElementById('front-database-body');
@@ -250,4 +247,103 @@
             document.getElementById('scanner-container').classList.remove('hidden');
             document.getElementById('scanner-container').classList.add('flex');
             
-            document
+            document.getElementById('status-badge').innerText = "Cámara Activa";
+            document.getElementById('status-badge').className = "inline-block px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-[10px] uppercase font-bold tracking-widest mb-3 animate-pulse";
+            
+            if(window.innerWidth < 1024) {
+                setTimeout(() => { scannerTitle.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 150);
+            }
+            
+            if(html5QrcodeScanner) html5QrcodeScanner.clear().catch(() => {});
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0, showTorchButtonIfSupported: true
+            }, false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function closeScanner() {
+            document.getElementById('scanner-container').classList.add('hidden');
+            document.getElementById('scanner-container').classList.remove('flex');
+            document.getElementById('scanner-activity-title').innerHTML = 'Selecciona una <br><span class="text-[#d99a73]">actividad</span>';
+            
+            document.getElementById('status-badge').innerText = "En espera";
+            document.getElementById('status-badge').className = "inline-block px-3 py-1 bg-black/40 text-white/50 border border-white/10 rounded-full text-[10px] uppercase font-bold tracking-widest mb-3";
+
+            if(html5QrcodeScanner) html5QrcodeScanner.clear().catch(() => {});
+        }
+
+        function onScanSuccess(decodedText) {
+            if(html5QrcodeScanner) html5QrcodeScanner.pause();
+            const feedback = document.getElementById('scan-feedback');
+
+            try {
+                const user = JSON.parse(decodedText);
+                if(!user.n) throw new Error("QR Inválido");
+
+                const now = new Date();
+                const horaActual = now.toLocaleTimeString('es-MX');
+                const fechaActual = now.toLocaleDateString('es-MX');
+                const diaAsignado = activeConfForScanner.id <= 15 ? "Día 1" : "Día 2";
+
+                const newRecord = {
+                    "Nombre completo": user.n,
+                    "tipo de asistente": user.t || 'Asistente',
+                    "organizacion": user.o || 'N/A',
+                    "dias": diaAsignado,
+                    "actividad": activeConfForScanner.title,
+                    "fecha": fechaActual,
+                    "hora": horaActual
+                };
+
+                records.push(newRecord);
+                
+                try {
+                    localStorage.setItem('staffRegistrosFinal', JSON.stringify(records));
+                } catch(e) {}
+                
+                renderDatabaseFront();
+
+                fetch(driveUrl, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    headers: { 'Content-Type': 'text/plain' }, 
+                    body: JSON.stringify(newRecord) 
+                }).catch(e => console.log("Error al enviar a Sheet:", e));
+
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-green-500/20 border border-green-500/50 text-green-400 font-bold text-sm shadow-[0_0_20px_rgba(74,222,128,0.2)]";
+                feedback.innerHTML = `<i class="fa-solid fa-check-circle text-xl mb-1"></i> <span>${user.n} Registrado</span>`;
+
+            } catch (err) {
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 font-bold text-sm shadow-[0_0_20px_rgba(248,113,113,0.2)]";
+                feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-xl mb-1"></i> <span>Código no reconocido</span>`;
+            }
+
+            setTimeout(() => {
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-black/40 text-sm text-white/60 border border-white/5 transition-all";
+                feedback.innerHTML = '<i class="fa-solid fa-qrcode text-lg mb-1 opacity-50"></i> Apunta al siguiente QR...';
+                if(html5QrcodeScanner) html5QrcodeScanner.resume();
+            }, 2000);
+        }
+
+        function onScanFailure(error) {}
+
+        function exportToCSV() {
+            if(!records.length) {
+                alert("Aún no se ha escaneado ningún asistente.");
+                return;
+            }
+            let csv = "Nombre completo,tipo de asistente,organizacion,dias,actividad,fecha,hora\n" + 
+            records.map(r => `"${r['Nombre completo']}","${r['tipo de asistente']}","${r['organizacion']}","${r['dias']}","${r['actividad']}","${r['fecha']}","${r['hora']}"`).join('\n');
+            
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            link.download = `Respaldos_Staff_ForoCiencia.csv`;
+            link.click();
+        }
+
+        // EJECUTAR DIBUJO DE INTERFAZ DIRECTAMENTE
+        renderActivities();
+    </script>
+</body>
+</html>
