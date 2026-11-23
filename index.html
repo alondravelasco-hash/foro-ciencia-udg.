@@ -184,21 +184,63 @@
     <script>
         // 1. GENERAR 30 ACTIVIDADES (15 por día)
         const ACTIVITIES = [];
-        for(let i=1; i<=15; i++) ACTIVITIES.push({ id: i, date: "3 de Dic", title: `Actividad ${i}` });
-        for(let i=16; i<=30; i++) ACTIVITIES.push({ id: i, date: "4 de Dic", title: `Actividad ${i-15}` });
+        for(let i = 1; i <= 15; i++) ACTIVITIES.push({ id: i, date: "3 de Dic", title: `Actividad ${i}` });
+        for(let i = 16; i <= 30; i++) ACTIVITIES.push({ id: i, date: "4 de Dic", title: `Actividad ${i - 15}` });
 
-        // 2. TU ENLACE A GOOGLE APPS SCRIPT
+        // 2. ENLACE A GOOGLE APPS SCRIPT
         const driveUrl = "https://script.google.com/macros/s/AKfycbybEWP1cNPrtsMtxw6VmMeiPPEb3t05YydfmCuolTTyRojupSoyBzmDNyEnlPzGpff0/exec"; 
         
         let activeConfForScanner = null;
         let html5QrcodeScanner = null;
-        let records = JSON.parse(localStorage.getItem('staffRegistros')) || [];
+        let records = [];
 
-        // 3. CONEXIÓN AUTOMÁTICA CON GOOGLE DRIVE AL ABRIR
+        // Lectura segura de memoria local (evita que un error detenga la página)
+        try {
+            const saved = localStorage.getItem('staffRegistros');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed)) records = parsed;
+            }
+        } catch (e) {
+            localStorage.removeItem('staffRegistros');
+            records = [];
+        }
+
+        // 3. DIBUJAR ACTIVIDADES
+        function renderActivities() {
+            const day1Grid = document.getElementById('day1-grid');
+            const day2Grid = document.getElementById('day2-grid');
+            if(!day1Grid || !day2Grid) return;
+
+            let htmlDay1 = '';
+            let htmlDay2 = '';
+
+            ACTIVITIES.forEach(act => {
+                const btnHTML = `
+                <button onclick="startScanner(${act.id})" class="group p-4 bg-black/20 hover:bg-[#6b4c3a]/80 border border-white/5 hover:border-[#d99a73]/50 rounded-2xl text-left transition-all duration-300 flex flex-col justify-between h-24 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-150"></div>
+                    <span class="text-sm font-medium text-white/90 group-hover:text-white z-10 relative">${act.title}</span>
+                    <span class="text-[10px] uppercase tracking-widest text-[#d99a73] font-bold opacity-70 group-hover:opacity-100 flex items-center gap-1 z-10 relative">
+                        <i class="fa-solid fa-expand"></i> Escanear
+                    </span>
+                </button>`;
+                
+                if(act.id <= 15) htmlDay1 += btnHTML;
+                else htmlDay2 += btnHTML;
+            });
+
+            day1Grid.innerHTML = htmlDay1;
+            day2Grid.innerHTML = htmlDay2;
+            renderDatabaseFront();
+        }
+
+        // 4. CONEXIÓN AUTOMÁTICA CON GOOGLE DRIVE
         async function syncWithDrive() {
             const dbStatus = document.getElementById('db-status');
-            dbStatus.innerText = "Sincronizando...";
-            dbStatus.className = "px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30";
+            if (dbStatus) {
+                dbStatus.innerText = "Sincronizando...";
+                dbStatus.className = "px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold bg-yellow-500/20 text-yellow-300 border border-yellow-500/30";
+            }
 
             try {
                 const response = await fetch(driveUrl);
@@ -211,46 +253,19 @@
                     renderDatabaseFront();
                 }
 
-                dbStatus.innerText = "Conectado a Drive";
-                dbStatus.className = "px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold bg-green-500/20 text-green-400 border border-green-500/30";
+                if (dbStatus) {
+                    dbStatus.innerText = "Conectado a Drive";
+                    dbStatus.className = "px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold bg-green-500/20 text-green-400 border border-green-500/30";
+                }
             } catch (error) {
                 console.error("Sin conexión a Drive, usando respaldo local:", error);
-                dbStatus.innerText = "Modo Local";
-                dbStatus.className = "px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold bg-red-500/20 text-red-400 border border-red-500/30";
+                if (dbStatus) {
+                    dbStatus.innerText = "Modo Local";
+                    dbStatus.className = "px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-bold bg-red-500/20 text-red-400 border border-red-500/30";
+                }
                 renderDatabaseFront();
             }
         }
-
-        // 4. RENDERIZAR BOTONES Y CONECTAR AL CARGAR
-        function renderActivities() {
-            const day1Grid = document.getElementById('day1-grid');
-            const day2Grid = document.getElementById('day2-grid');
-            if(!day1Grid || !day2Grid) return;
-
-            day1Grid.innerHTML = '';
-            day2Grid.innerHTML = '';
-
-            ACTIVITIES.forEach(act => {
-                const btnHTML = `
-                <button onclick="startScanner(${act.id})" class="group p-4 bg-black/20 hover:bg-[#6b4c3a]/80 border border-white/5 hover:border-[#d99a73]/50 rounded-2xl text-left transition-all duration-300 flex flex-col justify-between h-24 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-150"></div>
-                    <span class="text-sm font-medium text-white/90 group-hover:text-white z-10 relative">${act.title}</span>
-                    <span class="text-[10px] uppercase tracking-widest text-[#d99a73] font-bold opacity-70 group-hover:opacity-100 flex items-center gap-1 z-10 relative">
-                        <i class="fa-solid fa-expand"></i> Escanear
-                    </span>
-                </button>`;
-                
-                if(act.id <= 15) day1Grid.innerHTML += btnHTML;
-                else day2Grid.innerHTML += btnHTML;
-            });
-
-            renderDatabaseFront();
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            renderActivities();
-            syncWithDrive();
-        });
 
         function renderDatabaseFront() {
             const tbody = document.getElementById('front-database-body');
@@ -286,4 +301,112 @@
             document.getElementById('scanner-container').classList.remove('hidden');
             document.getElementById('scanner-container').classList.add('flex');
             
-            const badge = document.getElementById
+            const badge = document.getElementById('status-badge');
+            badge.innerText = "Cámara Activa";
+            badge.className = "inline-block px-3 py-1 bg-green-500/20 text-green-400 border border-green-500/30 rounded-full text-[10px] uppercase font-bold tracking-widest mb-3 animate-pulse";
+            
+            const feedback = document.getElementById('scan-feedback');
+            feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-black/40 text-sm text-white/60 border border-white/5";
+            feedback.innerHTML = '<i class="fa-solid fa-camera text-lg mb-1 opacity-50"></i> Apunta al código QR';
+
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(() => {});
+            }
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
+                fps: 10, 
+                qrbox: {width: 250, height: 250},
+                aspectRatio: 1.0,
+                showTorchButtonIfSupported: true
+            }, false);
+            
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+            
+            if(window.innerWidth < 1024) {
+                setTimeout(() => {
+                    document.getElementById('scanner-activity-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 300);
+            }
+        }
+
+        function closeScanner() {
+            document.getElementById('scanner-container').classList.add('hidden');
+            document.getElementById('scanner-container').classList.remove('flex');
+            document.getElementById('scanner-activity-title').innerHTML = 'Selecciona una <br><span class="text-[#d99a73]">actividad</span>';
+            
+            const badge = document.getElementById('status-badge');
+            badge.innerText = "En espera";
+            badge.className = "inline-block px-3 py-1 bg-black/40 text-white/50 border border-white/10 rounded-full text-[10px] uppercase font-bold tracking-widest mb-3";
+
+            if(html5QrcodeScanner) {
+                html5QrcodeScanner.clear().catch(() => {});
+            }
+        }
+
+        function onScanSuccess(decodedText) {
+            if(html5QrcodeScanner) html5QrcodeScanner.pause();
+            const feedback = document.getElementById('scan-feedback');
+
+            try {
+                const user = JSON.parse(decodedText);
+                if(!user.n) throw new Error("QR Inválido");
+
+                const newRecord = {
+                    Nombre: user.n,
+                    Tipo: user.t || 'Asistente',
+                    Organizacion: user.o || 'N/A',
+                    DiasRegistrados: user.d || 'N/A',
+                    Conferencia: activeConfForScanner.title,
+                    Dia: activeConfForScanner.date,
+                    Hora: "Registro en puerta",
+                    Timestamp: new Date().toLocaleString()
+                };
+
+                records.push(newRecord);
+                localStorage.setItem('staffRegistros', JSON.stringify(records));
+                renderDatabaseFront();
+
+                fetch(driveUrl, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+                    body: JSON.stringify(newRecord) 
+                })
+                .then(res => res.json())
+                .then(data => console.log("Guardado en Drive:", data))
+                .catch(e => console.error("Error al enviar a Drive:", e));
+
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-green-500/20 border border-green-500/50 text-green-400 font-bold text-sm shadow-[0_0_20px_rgba(74,222,128,0.2)]";
+                feedback.innerHTML = `<i class="fa-solid fa-check-circle text-xl mb-1"></i> <span>${user.n} (${user.t || 'Asistente'})</span>`;
+
+            } catch (err) {
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-red-500/20 border border-red-500/50 text-red-400 font-bold text-sm shadow-[0_0_20px_rgba(248,113,113,0.2)]";
+                feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-xl mb-1"></i> <span>Código no reconocido</span>`;
+            }
+
+            setTimeout(() => {
+                feedback.className = "w-full min-h-[3.5rem] p-3 flex flex-col items-center justify-center rounded-xl bg-black/40 text-sm text-white/60 border border-white/5 transition-all";
+                feedback.innerHTML = '<i class="fa-solid fa-qrcode text-lg mb-1 opacity-50"></i> Apunta al siguiente QR...';
+                if(html5QrcodeScanner) html5QrcodeScanner.resume();
+            }, 2000);
+        }
+
+        function onScanFailure(error) {}
+
+        function exportToCSV() {
+            if(!records.length) {
+                alert("Aún no se ha escaneado ningún asistente.");
+                return;
+            }
+            let csv = "Nombre,Tipo,Organización,DíasRegistrados,Actividad,Día,Timestamp\n" + records.map(r => `"${r.Nombre}","${r.Tipo}","${r.Organizacion}","${r.DiasRegistrados}","${r.Conferencia}","${r.Dia}","${r.Timestamp}"`).join('\n');
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+            link.download = `Respaldos_Staff_ForoCiencia.csv`;
+            link.click();
+        }
+
+        // EJECUCIÓN INMEDIATA AL CARGAR EL ARCHIVO
+        renderActivities();
+        syncWithDrive();
+    </script>
+</body>
+</html>
